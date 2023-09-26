@@ -8,23 +8,15 @@ import {
   NavigationControl,
   Source,
 } from "react-map-gl";
-import { data } from "../data";
-
-const pointLayer = {
-  id: "point",
-  type: "circle",
-  paint: {
-    "circle-radius": 10,
-    "circle-color": "#007cbf",
-  },
-};
-
-function pointOnCircle({ lang, lat }) {
-  return {
-    type: "Point",
-    coordinates: [lang, lat],
-  };
-}
+import {
+  geojson,
+  endPoint,
+  pointLayer,
+  layerEndPoint,
+  lineStyle,
+  pointOnCircle,
+  getRoute,
+} from "./utils";
 
 const App = () => {
   const [viewState, setViewState] = useState({
@@ -35,105 +27,78 @@ const App = () => {
 
   const [start, setStart] = useState([-73, 42]);
   const [end, setEnd] = useState([-73, 42.2]);
-  const [coords, setCoords] = useState(data);
+  const [coords, setCoords] = useState([]);
   const [pointData, setPointData] = useState(null);
-  const [index, setIndex] = useState(0);
+  const [resume, setResume] = useState(false);
+  const animationDuration = 300; //
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    getRoute();
+    getRoute(start, end).then((data) => {
+      setCoords(data.routes[0].geometry.coordinates);
+    });
   }, [end]);
 
   useEffect(() => {
-    if (index === coords.length) return;
-    const animation = window.requestAnimationFrame(() =>
-      setPointData(
-        pointOnCircle({
-          lang: coords[index][0],
-          lat: coords[index][1],
-        })
-      )
-    );
+    let animationFrameId;
+    // if (index === coords.length) return;
 
-    setIndex((prev) => prev + 1);
+    // const animate = () => {
+    //   for (let i = 0; i < coords.length - 1; i++) {
+    //     const startCoords = { lang: coords[i][0], lat: coords[i][1] };
+    //     const endCoords = { lang: coords[i + 1][0], lat: coords[i + 1][1] };
+    //     const points = pointOnCircle(startCoords, endCoords, progress);
+    //     setPointData(points);
+    //   }
+
+    // if (resume) {
+    //   animation = window.requestAnimationFrame(() =>
+    //     setPointData(
+    //       pointOnCircle({
+    //         lang: coords[index][0],
+    //         lat: coords[index][1],
+    //       })
+    //     )
+    //   );
+    //   setIndex((prev) => prev + 1);
+    // }
+
+    const animate = () => {
+      animation = window.requestAnimationFrame(() =>
+        setPointData(
+          pointOnCircle({
+            lang: coords[index][0],
+            lat: coords[index][1],
+          })
+        )
+      );
+      setIndex((prev) => prev + 1);
+    };
+
+    setProgress((prevProgress) => {
+      const newProgress = prevProgress + 1 / (animationDuration / 16); // 16ms per frame for 60fps
+      if (newProgress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+      return newProgress;
+    });
+
+    // animate();
     return () => window.cancelAnimationFrame(animation);
-  }, [end, index]);
+  }, [end, index, resume]);
 
-  const getRoute = async () => {
-    const response = await fetch(
-      `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${
-        start[1]
-      };${end[0]},${
-        end[1]
-      }?alternatives=true&geometries=geojson&language=en&overview=full&steps=true&access_token=${
-        import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
-      }`
-    );
-
-    const data = await response.json();
-    setCoords(data.routes[0].geometry.coordinates);
-  };
-
-  const geojson = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "feature",
-        geometry: {
-          type: "LineString",
-          coordinates: [...coords],
-        },
-      },
-    ],
-  };
-
-  const lineStyle = {
-    id: "roadLayer",
-    type: "line",
-    layout: {
-      "line-join": "round",
-      "line-cap": "round",
-    },
-    paint: {
-      "line-color": "blue",
-      "line-width": 4,
-      "line-opacity": 0.75,
-    },
-  };
-
-  const endPoint = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "feature",
-        geometry: {
-          type: "Point",
-          coordinates: [...end],
-        },
-      },
-    ],
-  };
-
-  const layerEndPoint = {
-    id: "end",
-    type: "circle",
-    source: {
-      type: "geojson",
-      data: end,
-    },
-    paint: {
-      "circle-radius": 10,
-      "circle-color": "red",
-    },
-  };
+  console.log(pointData);
 
   const handleClick = (e) => {
-    const newEnd = e.lngLat;
-    const endPoint = Object.keys(newEnd).map((item) => newEnd[item]);
-
-    setEnd(endPoint);
+    const { lng, lat } = e.lngLat;
+    setEnd([lng, lat]);
   };
 
-  const handleResume = () => {};
+  const handleResume = () => {
+    // for (let i = 0; i < coords.length; i++) {
+    // }
+    setResume((prev) => !prev);
+  };
 
   return (
     <div>
@@ -147,12 +112,12 @@ const App = () => {
         onClick={handleClick}
       >
         <Marker longitude={start[0]} latitude={start[1]} />
-        <Source id="routeSource" type="geojson" data={geojson}>
+        <Source id="routeSource" type="geojson" data={geojson(coords)}>
           <Layer {...lineStyle} />
         </Source>
 
-        <Source id="endSource" type="geojson" data={endPoint}>
-          <Layer {...layerEndPoint} />
+        <Source id="endSource" type="geojson" data={endPoint(end)}>
+          <Layer {...layerEndPoint(end)} />
         </Source>
 
         {pointData && (
