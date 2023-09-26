@@ -16,7 +16,10 @@ import {
   lineStyle,
   pointOnCircle,
   getRoute,
+  INITIAL_DATA,
 } from "./utils";
+import { useMapImage } from "./hooks";
+import CoordinatesCard from "./components/CoordinatesCard";
 
 const App = () => {
   const [viewState, setViewState] = useState({
@@ -24,46 +27,44 @@ const App = () => {
     latitude: 42,
     zoom: 7,
   });
-
-  const [start, setStart] = useState([-73, 42]);
-  const [end, setEnd] = useState([-73, 42.2]);
   const [coords, setCoords] = useState([]);
+  const [start, setStart] = useState([]);
+  const [end, setEnd] = useState([]);
   const [pointData, setPointData] = useState(null);
+  const [index, setIndex] = useState(0);
   const [resume, setResume] = useState(false);
-  const animationDuration = 300; //
-  const [progress, setProgress] = useState(0);
+  const [mapState, setMapState] = useState();
+  const [numberOfList, setNumberOfList] = useState(INITIAL_DATA);
+  const [error, setError] = useState(null);
+  const image = useMapImage({
+    mapState,
+    url: "/assets/drone.png",
+    name: "drone",
+  });
 
   useEffect(() => {
-    getRoute(start, end).then((data) => {
-      setCoords(data.routes[0].geometry.coordinates);
-    });
+    setError("");
+    if (start.length && end.length) {
+      getRoute(start, end)
+        .then((data) => {
+          if (data.code === "NoSegment") {
+            setError(data);
+          } else {
+            setCoords(data.routes[0].geometry.coordinates);
+          }
+        })
+        .catch((err) => {
+          setError(err);
+        });
+    }
   }, [end]);
 
   useEffect(() => {
-    let animationFrameId;
-    // if (index === coords.length) return;
+    if (index === coords.length) return;
 
-    // const animate = () => {
-    //   for (let i = 0; i < coords.length - 1; i++) {
-    //     const startCoords = { lang: coords[i][0], lat: coords[i][1] };
-    //     const endCoords = { lang: coords[i + 1][0], lat: coords[i + 1][1] };
-    //     const points = pointOnCircle(startCoords, endCoords, progress);
-    //     setPointData(points);
-    //   }
+    let animation;
 
-    // if (resume) {
-    //   animation = window.requestAnimationFrame(() =>
-    //     setPointData(
-    //       pointOnCircle({
-    //         lang: coords[index][0],
-    //         lat: coords[index][1],
-    //       })
-    //     )
-    //   );
-    //   setIndex((prev) => prev + 1);
-    // }
-
-    const animate = () => {
+    if (resume) {
       animation = window.requestAnimationFrame(() =>
         setPointData(
           pointOnCircle({
@@ -73,21 +74,10 @@ const App = () => {
         )
       );
       setIndex((prev) => prev + 1);
-    };
+    }
 
-    setProgress((prevProgress) => {
-      const newProgress = prevProgress + 1 / (animationDuration / 16); // 16ms per frame for 60fps
-      if (newProgress < 1) {
-        animationFrameId = requestAnimationFrame(animate);
-      }
-      return newProgress;
-    });
-
-    // animate();
-    return () => window.cancelAnimationFrame(animation);
-  }, [end, index, resume]);
-
-  console.log(pointData);
+    return () => cancelAnimationFrame(animation);
+  }, [index, resume]);
 
   const handleClick = (e) => {
     const { lng, lat } = e.lngLat;
@@ -95,14 +85,24 @@ const App = () => {
   };
 
   const handleResume = () => {
-    // for (let i = 0; i < coords.length; i++) {
-    // }
     setResume((prev) => !prev);
+  };
+
+  const handleGetDirection = () => {
+    setStart(numberOfList[0].coordinates.split(",").map((item) => +item));
+    setEnd(
+      numberOfList[numberOfList.length - 1].coordinates
+        .split(",")
+        .map((item) => +item)
+    );
+    setCoords(numberOfList);
   };
 
   return (
     <div>
-      <button onClick={handleResume}>Resume</button>
+      <button className="bg-red-500" onClick={handleResume}>
+        Resume
+      </button>
       <Map
         {...viewState}
         onMove={(e) => setViewState(e.viewState)}
@@ -110,15 +110,29 @@ const App = () => {
         mapboxAccessToken={import.meta.env.VITE_MAPBOX_ACCESS_TOKEN}
         style={{ height: "100vh", width: "100wv" }}
         onClick={handleClick}
+        ref={setMapState}
+        className="relative"
       >
-        <Marker longitude={start[0]} latitude={start[1]} />
+        <CoordinatesCard
+          error={error}
+          numberOfList={numberOfList}
+          setNumberOfList={setNumberOfList}
+          handleGetDirection={handleGetDirection}
+        />
+
+        {start.length ? (
+          <Marker longitude={start[0]} latitude={start[1]} />
+        ) : null}
+
         <Source id="routeSource" type="geojson" data={geojson(coords)}>
           <Layer {...lineStyle} />
         </Source>
 
-        <Source id="endSource" type="geojson" data={endPoint(end)}>
-          <Layer {...layerEndPoint(end)} />
-        </Source>
+        {end.length ? (
+          <Source id="endSource" type="geojson" data={endPoint(end)}>
+            <Layer {...layerEndPoint(end)} />
+          </Source>
+        ) : null}
 
         {pointData && (
           <Source type="geojson" data={pointData}>

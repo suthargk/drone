@@ -1,3 +1,5 @@
+import { v4 as uuid4 } from "uuid";
+
 export const geojson = (coords) => {
   return {
     type: "FeatureCollection",
@@ -52,26 +54,25 @@ export const layerEndPoint = (end) => {
     },
     paint: {
       "circle-radius": 10,
-      "circle-color": "red",
+      "circle-color": "#f43f5e",
     },
   };
 };
 
 export const pointLayer = {
   id: "point",
-  type: "circle",
-  paint: {
-    "circle-radius": 10,
-    "circle-color": "#007cbf",
+  type: "symbol",
+  source: "point",
+  layout: {
+    "icon-image": "drone",
+    "icon-size": 0.8,
   },
 };
 
-export function pointOnCircle(startCoords, endCoords, progress) {
-  const x = startCoords.lang + (endCoords.lang - startCoords.lang) * progress;
-  const y = startCoords.lat + (endCoords.lat - startCoords.lat) * progress;
+export function pointOnCircle({ lang, lat }) {
   return {
     type: "Point",
-    coordinates: [x, y],
+    coordinates: [lang, lat],
   };
 }
 
@@ -85,7 +86,17 @@ export const getRoute = async (start, end) => {
       import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
     }`
   );
-
   const data = await response.json();
   return data;
 };
+
+export const INITIAL_DATA = [
+  {
+    id: uuid4(),
+    coordinates: "",
+  },
+  {
+    id: uuid4(),
+    coordinates: "",
+  },
+];
