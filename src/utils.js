@@ -76,13 +76,18 @@ export function pointOnCircle({ lang, lat }) {
   };
 }
 
-export const getRoute = async (start, end) => {
+export const getRoute = async (start, end, coordinates) => {
+  const points = coordinates
+    .map((data) =>
+      data.coordinates
+        .split(",")
+        .map((data) => +data)
+        .join(",")
+    )
+    .join(";");
+
   const response = await fetch(
-    `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${
-      start[1]
-    };${end[0]},${
-      end[1]
-    }?alternatives=true&geometries=geojson&language=en&overview=full&steps=true&access_token=${
+    `https://api.mapbox.com/directions/v5/mapbox/driving/${points}?alternatives=true&geometries=geojson&language=en&overview=full&steps=true&access_token=${
       import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
     }`
   );

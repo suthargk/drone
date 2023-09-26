@@ -18,11 +18,6 @@ const Input = ({
     setNumberOfList(updatedList);
   };
 
-  // const error = item.coordinates
-  //   .split(",")
-  //   .map((item) => +item)
-  //   .some((data) => data > 90);
-
   return (
     <label className="w-full flex items-center relative divide-x">
       <input
@@ -32,7 +27,6 @@ const Input = ({
         value={item.coordinates}
         onChange={handleChange}
       />
-      {/* {error && <div>Error</div>} */}
       {numberOfListLength > 2 ? (
         <button
           onClick={() => handleDeleteField(item.id)}
