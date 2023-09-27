@@ -91,10 +91,6 @@ const App = () => {
           } else {
             setCoords(data.routes[0].geometry.coordinates);
             setIsButtonLoading(false);
-            setPointData(
-              data.routes[0].geometry.coordinates[0][0],
-              data.routes[0].geometry.coordinates[0][1]
-            );
             setIndex(0);
           }
         })
