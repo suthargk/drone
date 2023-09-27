@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { v4 as uuid4 } from "uuid";
 import {
   FullscreenControl,
   GeolocateControl,
@@ -36,6 +37,7 @@ const App = () => {
   const [numberOfList, setNumberOfList] = useState(INITIAL_DATA);
   const [error, setError] = useState(null);
   const [isButtonLoading, setIsButtonLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState("");
   const [play, setPlay] = useState(false);
   const image = useMapImage({
     mapState,
@@ -76,22 +78,21 @@ const App = () => {
     if (isListEmpty.length > 1) {
       setError("");
       setIsButtonLoading(true);
-      if (start.length && end.length) {
-        getRoute(start, end, numberOfList)
-          .then((data) => {
-            if (data.code === "NoSegment") {
-              setError(data);
-              setIsButtonLoading(false);
-            } else {
-              setCoords(data.routes[0].geometry.coordinates);
-              setIsButtonLoading(false);
-            }
-          })
-          .catch((err) => {
-            setError(err);
+
+      getRoute(start, end, numberOfList)
+        .then((data) => {
+          if (data.code === "NoSegment") {
+            setError(data);
             setIsButtonLoading(false);
-          });
-      }
+          } else {
+            setCoords(data.routes[0].geometry.coordinates);
+            setIsButtonLoading(false);
+          }
+        })
+        .catch((err) => {
+          setError(err);
+          setIsButtonLoading(false);
+        });
     }
 
     const startPoints = numberOfList[0].coordinates
@@ -114,6 +115,27 @@ const App = () => {
     setCoords(numberOfList);
   };
 
+  const handleFile = (e) => {
+    setError("");
+    const file = e.target.files[0];
+    setSelectedFile(file.name);
+    if (file) {
+      const reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          const coordinateData = data.map(({ lng, lat }) => {
+            return { id: uuid4(), coordinates: [lng, lat].join(",") };
+          });
+          setNumberOfList(coordinateData);
+        } catch (error) {
+          setError(error);
+        }
+      };
+    }
+  };
+
   return (
     <Map
       {...viewState}
@@ -134,6 +156,8 @@ const App = () => {
         setNumberOfList={setNumberOfList}
         handleGetDirection={handleGetDirection}
         isButtonLoading={isButtonLoading}
+        selectedFile={selectedFile}
+        handleFile={handleFile}
       />
 
       {start.length ? (

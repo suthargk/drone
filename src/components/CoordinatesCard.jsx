@@ -15,6 +15,8 @@ const CoordinatesCard = ({
   handlePlay,
   isButtonLoading,
   coords,
+  selectedFile,
+  handleFile,
 }) => {
   const handleAddMoreField = () => {
     setNumberOfList([...numberOfList, { id: uuid4(), coordinates: "" }]);
@@ -35,16 +37,21 @@ const CoordinatesCard = ({
           htmlFor="file"
           className="cursor-pointer text-sm text-white gap-1 flex py-1 px-2 bg-blue-500 rounded-md"
         >
-          <input id="file" className="hidden" type="file" />
-          Upload
+          <input
+            id="file"
+            className="hidden"
+            type="file"
+            onChange={handleFile}
+          />
+          {selectedFile ? selectedFile : "Upload"}
           <UploadIcon width={18} height={18} />
         </label>
         <button
           onClick={handlePlay}
           className={`${
-            isListEmpty.length < 2 ? "opacity-30 cursor-not-allowed" : ""
+            coords.length === 0 ? "opacity-30 cursor-not-allowed" : ""
           }`}
-          disabled={isListEmpty.length < 2 ? true : false}
+          disabled={coords.length === 0 ? true : false}
         >
           {play ? (
             <PauseIcon width={24} height={24} />
