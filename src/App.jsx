@@ -39,6 +39,7 @@ const App = () => {
   const [isButtonLoading, setIsButtonLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState("");
   const [play, setPlay] = useState(false);
+
   const image = useMapImage({
     mapState,
     url: "/assets/drone.png",
@@ -51,14 +52,16 @@ const App = () => {
     let animation;
 
     if (play) {
-      animation = window.requestAnimationFrame(() =>
+      animation = window.requestAnimationFrame(() => {
+        mapState.flyTo({ center: [coords[index][0], coords[index][1]] });
+
         setPointData(
           pointOnCircle({
             lang: coords[index][0],
             lat: coords[index][1],
           })
-        )
-      );
+        );
+      });
       setIndex((prev) => prev + 1);
     }
 
@@ -130,7 +133,7 @@ const App = () => {
           });
           setNumberOfList(coordinateData);
         } catch (error) {
-          setError(error);
+          setError({ message: "Invalid File!, File must be a JSON" });
         }
       };
     }
